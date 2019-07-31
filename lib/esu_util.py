@@ -5,8 +5,9 @@ import numpy as np
 import torch as t
 import torch.nn as nn
 import torchvision as tv
+from scipy.ndimage.filters import gaussian_filter, median_filter
+from skimage.restoration import denoise_bilateral, denoise_tv_chambolle
     
-# Normalize each color sepearately (Photoshop auto tone)
 def autotone_PIL(img):
     img = np.array(img)
     img[:,:,0] = np.interp(img[:,:,0], [np.amin(img[:,:,0]), np.amax(img[:,:,0])], [0, 255])
@@ -38,6 +39,16 @@ def deprocess(tensor):
     
     return img
 
+def filter_median(npimg, params):
+    npimg = median_filter(npimg, size=(1, 1, params['fsize'], params['fsize']))  
+    return npimg
+    
+def filter_TV(npimg, params):
+    npimg = pytorch_to_skimage(npimg)
+    npimg = denoise_tv_chambolle(npimg, weight=0.1, multichannel=True)
+    npimg = skimage_to_pytorch(npimg)
+    return npimg
+
 def gray_square_PIL(size):
     # Gray square, -1./1. range
     img = np.random.normal(0, 0.01, (size, size, 3)) 
@@ -52,7 +63,6 @@ def gray_square_PIL(size):
     
     return img
 
-# A helper function: show an image inline
 def show_img(img, fmt='jpeg'):
     if type(img) is np.ndarray:
         img = PIL.Image.fromarray(img)
